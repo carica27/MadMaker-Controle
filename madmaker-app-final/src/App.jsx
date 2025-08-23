@@ -38,7 +38,15 @@ const initialStore = {
   compras: BASE_MATERIAIS_REPOR.map(nome=>({nome,minimo:0,precisa:false})),
   catalogos: {kits:[...BASE_KITS_DIA], pecas:[...BASE_PECAS_PINTADAS]}
 };
-
+function inPeriod(dateISO, mode) {
+  const d = new Date(dateISO);
+  const now = new Date();
+  if (mode === "tudo") return true;
+  if (mode === "dia") return d.toDateString() === now.toDateString();
+  if (mode === "semana") {
+    const diff = (now - d) / (1000 * 60 * 60 * 24);
+    return diff <= 7 && now.getFullYear() === d.getFullYear();
+  }
 // ---------------------- UI ----------------------
 const Container = ({ children }) => (
   <div className="mx-auto max-w-screen-2xl px-4 py-4 lg:px-6 lg:py-6">{children}</div>
