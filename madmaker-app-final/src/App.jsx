@@ -759,7 +759,7 @@ function TelaAdmin({ storeApi, onLogout }) {
 }
 
 /* ---------- APP ROOT ---------- */
-export default function App() // ---------- Error Boundary (evita "tela branca") ----------
+// ---------- Error Boundary (evita "tela branca") ----------
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -793,21 +793,30 @@ class ErrorBoundary extends React.Component {
     return this.props.children;
   }
 }
-{
+
+export default function App() {
+  const [user, setUser] = useState(null);
   const storeApi = useStore();
-  const [session, setSession] = useState(null);
 
-  if (!session) return <Login onLogin={setSession} />;
+  const screen = !user ? (
+    <Login onLogin={setUser} />
+  ) : user.role === ROLES.PINTURA ? (
+    <TelaPintura
+      storeApi={storeApi}
+      usuario={user.nome}
+      onLogout={() => setUser(null)}
+    />
+  ) : user.role === ROLES.KITS_ESTOQUE ? (
+    <TelaKitsReposicao
+      storeApi={storeApi}
+      usuario={user.nome}
+      onLogout={() => setUser(null)}
+    />
+  ) : user.role === ROLES.ADMIN ? (
+    <TelaAdmin storeApi={storeApi} onLogout={() => setUser(null)} />
+  ) : null;
 
-  const logout = () => setSession(null);
-
-  if (session.role === ROLES.PINTURA)
-    return <TelaPintura storeApi={storeApi} usuario={session.nome} onLogout={logout} />;
-
-  if (session.role === ROLES.KITS_ESTOQUE)
-    return (
-      <TelaKitsReposicao storeApi={storeApi} usuario={session.nome} onLogout={logout} />
-    );
-
-  return <TelaAdmin storeApi={storeApi} onLogout={logout} />;
+  // 👇 ENVOLVE a tela com o ErrorBoundary
+  return <ErrorBoundary>{screen}</ErrorBoundary>;
 }
+
