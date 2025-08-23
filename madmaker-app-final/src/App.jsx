@@ -113,26 +113,130 @@ function useStore(){
 }
 
 // ---------------------- TELAS FUNCIONÁRIAS ----------------------
-function TelaPintura({storeApi,usuario,onLogout}){
-  const {store}=storeApi;
-  const [form,setForm]=useState({peca:store.catalogos.pecas[0]||"",qtd:0,descartada:0,verniz:false,concluida:false,obs:""});
-  const salvar=()=>{storeApi.addPintura({data:todayISO(),...form}); alert("Pintura registrada!");};
+function TelaPintura({ storeApi, usuario, onLogout }) {
+  const { store } = storeApi;
+  const [form, setForm] = useState({
+    peca: store.catalogos.pecas[0] || "",
+    qtd: 0,
+    descartada: 0,
+    verniz: false,
+    concluida: false,
+    obs: ""
+  });
+
+  // NOVO: filtro de período + histórico
+  const [periodo, setPeriodo] = useState("dia");
+  const historico = store.pintura.filter(
+    (r) => r.usuario === usuario && inPeriod(r.data, periodo)
+  );
+
+  const salvar = () => {
+    storeApi.addPintura({ data: todayISO(), ...form, usuario });
+    alert("Pintura registrada!");
+    setForm({
+      peca: store.catalogos.pecas[0] || "",
+      qtd: 0,
+      descartada: 0,
+      verniz: false,
+      concluida: false,
+      obs: ""
+    });
+  };
+
   return (
     <div className="h-screen w-screen bg-stone-50 flex flex-col">
-      <Header title={`Pintura • ${usuario}`} right={<Button variant="outline" onClick={onLogout}>Sair</Button>} />
+      <Header
+        title={`Pintura • ${usuario}`}
+        right={<Button variant="outline" onClick={onLogout}>Sair</Button>}
+      />
       <main className="flex-1 overflow-auto">
         <Container>
           <Card title="Registrar pintura">
             <div className="flex flex-col gap-3">
-              <select value={form.peca} onChange={e=>setForm({...form,peca:e.target.value})} className="border rounded px-2 py-1">
-                {store.catalogos.pecas.map(p=><option key={p}>{p}</option>)}
+              <select
+                value={form.peca}
+                onChange={(e) => setForm({ ...form, peca: e.target.value })}
+                className="border rounded px-2 py-1"
+              >
+                {store.catalogos.pecas.map((p) => (
+                  <option key={p}>{p}</option>
+                ))}
               </select>
-              <input type="number" placeholder="Quantidade pintada" value={form.qtd} onChange={e=>setForm({...form,qtd:Number(e.target.value)})} className="border rounded px-2 py-1"/>
-              <input type="number" placeholder="Quantidade descartada" value={form.descartada} onChange={e=>setForm({...form,descartada:Number(e.target.value)})} className="border rounded px-2 py-1"/>
-              <label className="flex items-center gap-2"><input type="checkbox" checked={form.concluida} onChange={e=>setForm({...form,concluida:e.target.checked})}/> Pintura concluída</label>
-              <label className="flex items-center gap-2"><input type="checkbox" checked={form.verniz} onChange={e=>setForm({...form,verniz:e.target.checked})}/> Recebeu verniz</label>
-              <textarea placeholder="Observações" value={form.obs} onChange={e=>setForm({...form,obs:e.target.value})} className="border rounded px-2 py-1"/>
+              <input
+                type="number"
+                placeholder="Quantidade pintada"
+                value={form.qtd}
+                onChange={(e) => setForm({ ...form, qtd: Number(e.target.value) })}
+                className="border rounded px-2 py-1"
+              />
+              <input
+                type="number"
+                placeholder="Quantidade descartada"
+                value={form.descartada}
+                onChange={(e) =>
+                  setForm({ ...form, descartada: Number(e.target.value) })
+                }
+                className="border rounded px-2 py-1"
+              />
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={form.concluida}
+                  onChange={(e) =>
+                    setForm({ ...form, concluida: e.target.checked })
+                  }
+                />
+                Pintura concluída
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={form.verniz}
+                  onChange={(e) =>
+                    setForm({ ...form, verniz: e.target.checked })
+                  }
+                />
+                Recebeu verniz
+              </label>
+              <textarea
+                placeholder="Observações"
+                value={form.obs}
+                onChange={(e) => setForm({ ...form, obs: e.target.value })}
+                className="border rounded px-2 py-1"
+              />
               <Button onClick={salvar}>Salvar</Button>
+            </div>
+          </Card>
+
+          {/* NOVO: Histórico com filtro */}
+          <Card title="Histórico (meus registros)">
+            <div className="flex items-center gap-2 mb-3 text-sm">
+              <span>Período:</span>
+              <select
+                className="border rounded px-2 py-1.5"
+                value={periodo}
+                onChange={(e) => setPeriodo(e.target.value)}
+              >
+                <option value="dia">Dia</option>
+                <option value="semana">Semana</option>
+                <option value="mes">Mês</option>
+                <option value="ano">Ano</option>
+                <option value="tudo">Tudo</option>
+              </select>
+              <Pill>Total: {historico.reduce((s, r) => s + r.qtd, 0)}</Pill>
+            </div>
+
+            <div className="text-sm divide-y">
+              {historico.map((r, i) => (
+                <div key={i} className="py-2 flex items-center justify-between">
+                  <span className="tabular-nums w-24">{r.data}</span>
+                  <span className="flex-1">{r.peca}</span>
+                  <span className="w-24 text-right">Qtd: {r.qtd}</span>
+                </div>
+              ))}
+              {historico.length === 0 && (
+                <p className="text-stone-500">Sem registros.</p>
+              )}
             </div>
           </Card>
         </Container>
@@ -141,36 +245,97 @@ function TelaPintura({storeApi,usuario,onLogout}){
   );
 }
 
-function TelaKitsReposicao({storeApi,usuario,onLogout}){
-  const {store}=storeApi;
-  const [formKit,setFormKit]=useState({kit:store.catalogos.kits[0]||"",qtd:0,obs:""});
-  const salvarKit=()=>{storeApi.addKit({data:todayISO(),...formKit}); alert("Kit registrado!");};
+function TelaKitsReposicao({ storeApi, usuario, onLogout }) {
+  const { store } = storeApi;
+  const [formKit, setFormKit] = useState({
+    kit: store.catalogos.kits[0] || "",
+    qtd: 0,
+    obs: ""
+  });
+
+  // NOVO: filtro de período + histórico
+  const [periodoK, setPeriodoK] = useState("dia");
+  const historicoK = store.kits.filter(
+    (r) => r.usuario === usuario && inPeriod(r.data, periodoK)
+  );
+
+  const salvarKit = () => {
+    storeApi.addKit({ data: todayISO(), ...formKit, usuario });
+    alert("Kit registrado!");
+    setFormKit({ kit: store.catalogos.kits[0] || "", qtd: 0, obs: "" });
+  };
+
   return (
     <div className="h-screen w-screen bg-stone-50 flex flex-col">
-      <Header title={`Kits & Reposição • ${usuario}`} right={<Button variant="outline" onClick={onLogout}>Sair</Button>} />
+      <Header
+        title={`Kits & Reposição • ${usuario}`}
+        right={<Button variant="outline" onClick={onLogout}>Sair</Button>}
+      />
       <main className="flex-1 overflow-auto">
         <Container>
           <Card title="Registrar kit montado">
             <div className="flex flex-col gap-3">
-              <select value={formKit.kit} onChange={e=>setFormKit({...formKit,kit:e.target.value})} className="border rounded px-2 py-1">
-                {store.catalogos.kits.map(k=><option key={k}>{k}</option>)}
+              <select
+                value={formKit.kit}
+                onChange={(e) => setFormKit({ ...formKit, kit: e.target.value })}
+                className="border rounded px-2 py-1"
+              >
+                {store.catalogos.kits.map((k) => (
+                  <option key={k}>{k}</option>
+                ))}
               </select>
-              <input type="number" placeholder="Quantidade" value={formKit.qtd} onChange={e=>setFormKit({...formKit,qtd:Number(e.target.value)})} className="border rounded px-2 py-1"/>
-              <textarea placeholder="Observações" value={formKit.obs} onChange={e=>setFormKit({...formKit,obs:e.target.value})} className="border rounded px-2 py-1"/>
+              <input
+                type="number"
+                placeholder="Quantidade"
+                value={formKit.qtd}
+                onChange={(e) =>
+                  setFormKit({ ...formKit, qtd: Number(e.target.value) })
+                }
+                className="border rounded px-2 py-1"
+              />
+              <textarea
+                placeholder="Observações"
+                value={formKit.obs}
+                onChange={(e) => setFormKit({ ...formKit, obs: e.target.value })}
+                className="border rounded px-2 py-1"
+              />
               <Button onClick={salvarKit}>Salvar</Button>
             </div>
           </Card>
 
-          <Card title="Materiais para repor/comprar">
-            <div className="flex flex-col gap-2">
-              {store.compras.map((c,idx)=>(
-                <label key={c.nome+idx} className="flex items-center gap-2">
-                  <input type="checkbox" checked={c.precisa} onChange={e=>storeApi.updateCompra(idx,{precisa:e.target.checked})}/>
-                  {c.nome} (mín: {c.minimo})
-                </label>
+          {/* NOVO: Histórico com filtro */}
+          <Card title="Histórico (meus kits)">
+            <div className="flex items-center gap-2 mb-3 text-sm">
+              <span>Período:</span>
+              <select
+                className="border rounded px-2 py-1.5"
+                value={periodoK}
+                onChange={(e) => setPeriodoK(e.target.value)}
+              >
+                <option value="dia">Dia</option>
+                <option value="semana">Semana</option>
+                <option value="mes">Mês</option>
+                <option value="ano">Ano</option>
+                <option value="tudo">Tudo</option>
+              </select>
+              <Pill>Total: {historicoK.reduce((s, r) => s + r.qtd, 0)}</Pill>
+            </div>
+
+            <div className="text-sm divide-y">
+              {historicoK.map((r, i) => (
+                <div key={i} className="py-2 flex items-center justify-between">
+                  <span className="tabular-nums w-24">{r.data}</span>
+                  <span className="flex-1">{r.kit}</span>
+                  <span className="w-24 text-right">Qtd: {r.qtd}</span>
+                </div>
               ))}
+              {historicoK.length === 0 && (
+                <p className="text-stone-500">Sem registros.</p>
+              )}
             </div>
           </Card>
+
+          {/* Seu card de materiais pode ficar abaixo como já estava */}
         </Container>
       </main>
     </div>
