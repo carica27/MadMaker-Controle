@@ -273,205 +273,146 @@ function inPeriod(dateISO, mode) {
 /* ---------- TELAS FUNCIONÁRIAS ---------- */
 // Vitória — Pintura
 function TelaPintura({ storeApi, usuario, onLogout }) {
-  const { store, addPintura } = storeApi;
+  const { store } = storeApi;
 
-  const [data, setData] = useState(todayISO());
-  const [peca, setPeca] = useState(store.catalogos.pecas[0] || "");
-  const [qtd, setQtd] = useState("");
-  const [descartada, setDescartada] = useState(0);
-  const [concluida, setConcluida] = useState(false);
-  const [verniz, setVerniz] = useState(false);
-  const [obs, setObs] = useState("");
+  const pecasOptions = Array.isArray(store?.catalogos?.pecas) ? store.catalogos.pecas : [];
+  const safeFirstPeca = pecasOptions[0] ?? "";
+
+  const [form, setForm] = useState({
+    peca: safeFirstPeca,
+    qtd: 0,
+    descartada: 0,
+    verniz: false,
+    concluida: false,
+    obs: ""
+  });
+
   const [periodo, setPeriodo] = useState("dia");
-
-  const salvar = () => {
-    if (!peca || !qtd) return alert("Selecione a peça e informe a quantidade.");
-    addPintura({
-      data,
-      peca,
-      qtd: Number(qtd),
-      descartada: Number(descartada) || 0,
-      concluida,
-      verniz,
-      obs,
-      usuario,
-    });
-    setPeca(store.catalogos.pecas[0] || "");
-    setQtd("");
-    setDescartada(0);
-    setConcluida(false);
-    setVerniz(false);
-    setObs("");
-    alert("Registro salvo.");
-  };
-
-  const historico = store.pintura.filter(
-    (r) => r.usuario === usuario && inPeriod(r.data, periodo)
+  const historico = (store?.pintura ?? []).filter(
+    (r) => r?.usuario === usuario && inPeriod(r?.data, periodo)
   );
 
+  const salvar = () => {
+    try {
+      storeApi.addPintura({ data: todayISO(), ...form, usuario });
+      alert("Pintura registrada!");
+      setForm({
+        peca: (Array.isArray(store?.catalogos?.pecas) && store.catalogos.pecas[0]) || "",
+        qtd: 0,
+        descartada: 0,
+        verniz: false,
+        concluida: false,
+        obs: ""
+      });
+    } catch (e) {
+      console.error(e);
+      alert("Não foi possível salvar. Tente novamente.");
+    }
+  };
+
   return (
-    <div className="h-screen w-screen bg-stone-50 text-stone-900 flex flex-col">
+    <div className="h-screen w-screen bg-stone-50 flex flex-col">
       <Header
-        title={Mad Maker • Pintura — ${usuario}}
+        title={`Pintura • ${usuario}`}
         right={<Button variant="outline" onClick={onLogout}>Sair</Button>}
       />
       <main className="flex-1 overflow-auto">
         <Container>
-          <Card title="Novo registro de pintura" subtitle="Preencha e clique em Salvar">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-              <label className="flex flex-col gap-1.5">
-                <span className="text-stone-600">Data</span>
-                <input
-                  type="date"
-                  value={data}
-                  onChange={(e) => setData(e.target.value)}
-                  className="border border-stone-300 rounded-xl px-3.5 py-2"
-                />
-              </label>
-
-              <label className="flex flex-col gap-1.5 md:col-span-2">
-                <span className="text-stone-600">Peça pintada</span>
-                <select
-                  value={peca}
-                  onChange={(e) => setPeca(e.target.value)}
-                  className="border border-stone-300 rounded-xl px-3.5 py-2 bg-white"
-                >
-                  {store.catalogos.pecas.map((p) => (
-                    <option key={p} value={p}>
-                      {p}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="flex flex-col gap-1.5">
-                <span className="text-stone-600">Quantidade pintada</span>
-                <input
-                  type="number"
-                  value={qtd}
-                  onChange={(e) => setQtd(e.target.value)}
-                  className="border border-stone-300 rounded-xl px-3.5 py-2"
-                  placeholder="ex.: 15"
-                />
-              </label>
-
-              <label className="flex flex-col gap-1.5">
-                <span className="text-stone-600">Quantidade descartada</span>
-                <input
-                  type="number"
-                  value={descartada}
-                  onChange={(e) => setDescartada(e.target.value)}
-                  className="border border-stone-300 rounded-xl px-3.5 py-2"
-                  placeholder="ex.: 1"
-                />
-              </label>
-
-              <div className="flex items-center gap-3">
-                <label className="flex items-center gap-2">
+          <Card title="Registrar pintura">
+            <div className="flex flex-col gap-3">
+              {pecasOptions.length === 0 ? (
+                <p className="text-sm text-stone-500">
+                  Nenhuma peça cadastrada. Peça ao Supervisor para adicionar peças no catálogo.
+                </p>
+              ) : (
+                <>
+                  <select
+                    value={form.peca || safeFirstPeca}
+                    onChange={(e) => setForm({ ...form, peca: e.target.value })}
+                    className="border rounded px-2 py-1"
+                  >
+                    {pecasOptions.map((p) => (
+                      <option key={p}>{p}</option>
+                    ))}
+                  </select>
                   <input
-                    type="checkbox"
-                    checked={concluida}
-                    onChange={(e) => setConcluida(e.target.checked)}
+                    type="number"
+                    placeholder="Quantidade pintada"
+                    value={form.qtd}
+                    onChange={(e) =>
+                      setForm({ ...form, qtd: Number(e.target.value) || 0 })
+                    }
+                    className="border rounded px-2 py-1"
                   />
-                  Pintura concluída
-                </label>
-                <label className="flex items-center gap-2">
                   <input
-                    type="checkbox"
-                    checked={verniz}
-                    onChange={(e) => setVerniz(e.target.checked)}
+                    type="number"
+                    placeholder="Quantidade descartada"
+                    value={form.descartada}
+                    onChange={(e) =>
+                      setForm({ ...form, descartada: Number(e.target.value) || 0 })
+                    }
+                    className="border rounded px-2 py-1"
                   />
-                  Recebeu verniz
-                </label>
-              </div>
-
-              <label className="flex flex-col gap-1.5 md:col-span-3">
-                <span className="text-stone-600">Observação do dia</span>
-                <textarea
-                  value={obs}
-                  onChange={(e) => setObs(e.target.value)}
-                  className="border border-stone-300 rounded-xl px-3.5 py-2"
-                  rows={2}
-                  placeholder="Opcional"
-                />
-              </label>
-            </div>
-
-            <div className="mt-4 flex gap-2">
-              <Button onClick={salvar}>Salvar</Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setPeca(store.catalogos.pecas[0] || "");
-                  setQtd("");
-                  setDescartada(0);
-                  setConcluida(false);
-                  setVerniz(false);
-                  setObs("");
-                }}
-              >
-                Limpar
-              </Button>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={form.concluida}
+                      onChange={(e) =>
+                        setForm({ ...form, concluida: e.target.checked })
+                      }
+                    />
+                    Pintura concluída
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={form.verniz}
+                      onChange={(e) =>
+                        setForm({ ...form, verniz: e.target.checked })
+                      }
+                    />
+                    Recebeu verniz
+                  </label>
+                  <textarea
+                    placeholder="Observações"
+                    value={form.obs}
+                    onChange={(e) => setForm({ ...form, obs: e.target.value })}
+                    className="border rounded px-2 py-1"
+                  />
+                  <Button onClick={salvar}>Salvar</Button>
+                </>
+              )}
             </div>
           </Card>
 
-          <Card
-            title="Consultar meus registros"
-            subtitle="Dia / Semana / Mês / Ano"
-            right={
-              <div className="flex flex-wrap gap-2">
-                {["dia", "semana", "mes", "ano", "tudo"].map((p) => (
-                  <Button
-                    key={p}
-                    variant={periodo === p ? "solid" : "outline"}
-                    size="sm"
-                    onClick={() => setPeriodo(p)}
-                  >
-                    {p.toUpperCase()}
-                  </Button>
-                ))}
-              </div>
-            }
-          >
-            <div className="overflow-auto rounded-xl ring-1 ring-stone-200">
-              <table className="w-full text-sm">
-                <thead className="bg-stone-50">
-                  <tr className="text-left text-stone-500">
-                    <th className="py-3 px-3">Data</th>
-                    <th className="px-3">Peça</th>
-                    <th className="px-3">Qtd</th>
-                    <th className="px-3">Desc.</th>
-                    <th className="px-3">Concluída</th>
-                    <th className="px-3">Verniz</th>
-                    <th className="px-3">Obs</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {historico.map((r, idx) => (
-                    <tr
-                      key={idx}
-                      className={border-t ${idx % 2 ? "bg-white" : "bg-stone-50/40"}}
-                    >
-                      <td className="py-3 px-3">{r.data}</td>
-                      <td className="px-3">{r.peca}</td>
-                      <td className="px-3">{r.qtd}</td>
-                      <td className="px-3">{r.descartada}</td>
-                      <td className="px-3">{r.concluida ? "Sim" : "Não"}</td>
-                      <td className="px-3">{r.verniz ? "Sim" : "Não"}</td>
-                      <td className="px-3 truncate max-w-[20ch]" title={r.obs}>
-                        {r.obs}
-                      </td>
-                    </tr>
-                  ))}
-                  {historico.length === 0 && (
-                    <tr>
-                      <td className="py-3 px-3 text-stone-500" colSpan={7}>
-                        Sem registros neste período.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+          <Card title="Histórico (meus registros)">
+            <div className="flex items-center gap-2 mb-3 text-sm">
+              <span>Período:</span>
+              <select
+                className="border rounded px-2 py-1.5"
+                value={periodo}
+                onChange={(e) => setPeriodo(e.target.value)}
+              >
+                <option value="dia">Dia</option>
+                <option value="semana">Semana</option>
+                <option value="mes">Mês</option>
+                <option value="ano">Ano</option>
+                <option value="tudo">Tudo</option>
+              </select>
+              <Pill>Total: {historico.reduce((s, r) => s + (Number(r?.qtd) || 0), 0)}</Pill>
+            </div>
+
+            <div className="text-sm divide-y">
+              {historico.map((r, i) => (
+                <div key={i} className="py-2 flex items-center justify-between">
+                  <span className="tabular-nums w-24">{r?.data || "-"}</span>
+                  <span className="flex-1">{r?.peca || "-"}</span>
+                  <span className="w-24 text-right">Qtd: {Number(r?.qtd) || 0}</span>
+                </div>
+              ))}
+              {historico.length === 0 && (
+                <p className="text-stone-500">Sem registros.</p>
+              )}
             </div>
           </Card>
         </Container>
@@ -482,225 +423,111 @@ function TelaPintura({ storeApi, usuario, onLogout }) {
 
 // Ana — Kits & Reposição
 function TelaKitsReposicao({ storeApi, usuario, onLogout }) {
-  const { store, addKit, updateCompra } = storeApi;
+  const { store } = storeApi;
 
-  const [dataK, setDataK] = useState(todayISO());
-  const [kit, setKit] = useState(store.catalogos.kits[0] || "");
-  const [qtdK, setQtdK] = useState("");
-  const [obsK, setObsK] = useState("");
+  // Fallbacks seguros (nunca undefined)
+  const kitsOptions = Array.isArray(store?.catalogos?.kits) ? store.catalogos.kits : [];
+  const safeFirstKit = kitsOptions[0] ?? "";
+
+  const [formKit, setFormKit] = useState({
+    kit: safeFirstKit,
+    qtd: 0,
+    obs: ""
+  });
+
   const [periodoK, setPeriodoK] = useState("dia");
-  const [filtroMat, setFiltroMat] = useState("");
-
-  const salvarKit = () => {
-    if (!kit || !qtdK) return alert("Selecione o kit e informe a quantidade.");
-    addKit({ data: dataK, kit, qtd: Number(qtdK), obs: obsK, usuario });
-    setKit(store.catalogos.kits[0] || "");
-    setQtdK("");
-    setObsK("");
-    alert("Registro de kit salvo.");
-  };
-
-  const historicoK = store.kits.filter(
-    (r) => r.usuario === usuario && inPeriod(r.data, periodoK)
+  const historicoK = (store?.kits ?? []).filter(
+    (r) => r?.usuario === usuario && inPeriod(r?.data, periodoK)
   );
 
+  const salvarKit = () => {
+    try {
+      // salva com usuario
+      storeApi.addKit({ data: todayISO(), ...formKit, usuario });
+      alert("Kit registrado!");
+      // reseta usando o primeiro kit disponível SEM ler algo indefinido
+      setFormKit({ kit: (Array.isArray(store?.catalogos?.kits) && store.catalogos.kits[0]) || "", qtd: 0, obs: "" });
+    } catch (e) {
+      console.error(e);
+      alert("Não foi possível salvar. Tente novamente.");
+    }
+  };
+
   return (
-    <div className="h-screen w-screen bg-stone-50 text-stone-900 flex flex-col">
+    <div className="h-screen w-screen bg-stone-50 flex flex-col">
       <Header
-        title={Mad Maker • Kits & Reposição — ${usuario}}
+        title={`Kits & Reposição • ${usuario}`}
         right={<Button variant="outline" onClick={onLogout}>Sair</Button>}
       />
       <main className="flex-1 overflow-auto">
         <Container>
-          <Card title="Kits montados" subtitle="Selecione o kit, informe a quantidade e salve">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-              <label className="flex flex-col gap-1.5">
-                <span className="text-stone-600">Data</span>
-                <input
-                  type="date"
-                  value={dataK}
-                  onChange={(e) => setDataK(e.target.value)}
-                  className="border border-stone-300 rounded-xl px-3.5 py-2"
-                />
-              </label>
-
-              <label className="flex flex-col gap-1.5 md:col-span-2">
-                <span className="text-stone-600">Kit</span>
-                <select
-                  value={kit}
-                  onChange={(e) => setKit(e.target.value)}
-                  className="border border-stone-300 rounded-xl px-3.5 py-2 bg-white"
-                >
-                  {store.catalogos.kits.map((k) => (
-                    <option key={k} value={k}>
-                      {k}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="flex flex-col gap-1.5">
-                <span className="text-stone-600">Quantidade</span>
-                <input
-                  type="number"
-                  value={qtdK}
-                  onChange={(e) => setQtdK(e.target.value)}
-                  className="border border-stone-300 rounded-xl px-3.5 py-2"
-                  placeholder="ex.: 10"
-                />
-              </label>
-
-              <label className="flex flex-col gap-1.5 md:col-span-2">
-                <span className="text-stone-600">Observação</span>
-                <input
-                  value={obsK}
-                  onChange={(e) => setObsK(e.target.value)}
-                  className="border border-stone-300 rounded-xl px-3.5 py-2"
-                  placeholder="Opcional"
-                />
-              </label>
-            </div>
-
-            <div className="mt-4 flex gap-2">
-              <Button onClick={salvarKit}>Salvar</Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setKit(store.catalogos.kits[0] || "");
-                  setQtdK("");
-                  setObsK("");
-                }}
-              >
-                Limpar
-              </Button>
-            </div>
-          </Card>
-
-          <Card
-            title="Consultar meus kits"
-            subtitle="Dia / Semana / Mês / Ano"
-            right={
-              <div className="flex flex-wrap gap-2">
-                {["dia", "semana", "mes", "ano", "tudo"].map((p) => (
-                  <Button
-                    key={p}
-                    variant={periodoK === p ? "solid" : "outline"}
-                    size="sm"
-                    onClick={() => setPeriodoK(p)}
+          <Card title="Registrar kit montado">
+            <div className="flex flex-col gap-3">
+              {kitsOptions.length === 0 ? (
+                <p className="text-sm text-stone-500">
+                  Nenhum kit cadastrado ainda. Peça ao Supervisor para adicionar kits no catálogo.
+                </p>
+              ) : (
+                <>
+                  <select
+                    value={formKit.kit || safeFirstKit}
+                    onChange={(e) => setFormKit({ ...formKit, kit: e.target.value })}
+                    className="border rounded px-2 py-1"
                   >
-                    {p.toUpperCase()}
-                  </Button>
-                ))}
-              </div>
-            }
-          >
-            <div className="overflow-auto rounded-xl ring-1 ring-stone-200">
-              <table className="w-full text-sm">
-                <thead className="bg-stone-50">
-                  <tr className="text-left text-stone-500">
-                    <th className="py-3 px-3">Data</th>
-                    <th className="px-3">Kit</th>
-                    <th className="px-3">Qtd</th>
-                    <th className="px-3">Obs</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {historicoK.map((r, idx) => (
-                    <tr
-                      key={idx}
-                      className={border-t ${idx % 2 ? "bg-white" : "bg-stone-50/40"}}
-                    >
-                      <td className="py-3 px-3">{r.data}</td>
-                      <td className="px-3">{r.kit}</td>
-                      <td className="px-3">{r.qtd}</td>
-                      <td className="px-3 truncate max-w-[24ch]" title={r.obs}>
-                        {r.obs}
-                      </td>
-                    </tr>
-                  ))}
-                  {historicoK.length === 0 && (
-                    <tr>
-                      <td className="py-3 px-3 text-stone-500" colSpan={4}>
-                        Sem registros neste período.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                    {kitsOptions.map((k) => (
+                      <option key={k}>{k}</option>
+                    ))}
+                  </select>
+                  <input
+                    type="number"
+                    placeholder="Quantidade"
+                    value={formKit.qtd}
+                    onChange={(e) =>
+                      setFormKit({ ...formKit, qtd: Number(e.target.value) || 0 })
+                    }
+                    className="border rounded px-2 py-1"
+                  />
+                  <textarea
+                    placeholder="Observações"
+                    value={formKit.obs}
+                    onChange={(e) => setFormKit({ ...formKit, obs: e.target.value })}
+                    className="border rounded px-2 py-1"
+                  />
+                  <Button onClick={salvarKit}>Salvar</Button>
+                </>
+              )}
             </div>
           </Card>
 
-          <Card
-            title="Materiais para repor/comprar"
-            subtitle="Defina mínimo, marque 'Precisa Comprar' e desmarque quando comprar"
-          >
-            <div className="mb-3 flex items-center gap-2">
-              <input
-                value={filtroMat}
-                onChange={(e) => setFiltroMat(e.target.value)}
-                placeholder="Filtrar por nome…"
-                className="border border-stone-300 rounded-xl px-3.5 py-2 text-sm w-full md:w-80"
-              />
-              <Pill>
-                Total:{" "}
-                {store.compras.filter((c) =>
-                  c.nome.toLowerCase().includes(filtroMat.toLowerCase())
-                ).length}
-              </Pill>
+          <Card title="Histórico (meus kits)">
+            <div className="flex items-center gap-2 mb-3 text-sm">
+              <span>Período:</span>
+              <select
+                className="border rounded px-2 py-1.5"
+                value={periodoK}
+                onChange={(e) => setPeriodoK(e.target.value)}
+              >
+                <option value="dia">Dia</option>
+                <option value="semana">Semana</option>
+                <option value="mes">Mês</option>
+                <option value="ano">Ano</option>
+                <option value="tudo">Tudo</option>
+              </select>
+              <Pill>Total: {historicoK.reduce((s, r) => s + (Number(r?.qtd) || 0), 0)}</Pill>
             </div>
 
-            <div className="overflow-auto rounded-xl ring-1 ring-stone-200">
-              <table className="w-full text-sm">
-                <thead className="bg-stone-50">
-                  <tr className="text-left text-stone-500">
-                    <th className="py-3 px-3">Item</th>
-                    <th className="px-3">Mínimo</th>
-                    <th className="px-3">Precisa Comprar</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {store.compras.map(
-                    (c, idx) =>
-                      c.nome
-                        .toLowerCase()
-                        .includes(filtroMat.toLowerCase()) && (
-                        <tr
-                          key={c.nome}
-                          className={`border-t ${
-                            idx % 2 ? "bg-white" : "bg-stone-50/40"
-                          }`}
-                        >
-                          <td className="py-3 px-3">{c.nome}</td>
-                          <td className="px-3">
-                            <input
-                              type="number"
-                              value={c.minimo}
-                              onChange={(e) =>
-                                updateCompra(idx, { minimo: Number(e.target.value) })
-                              }
-                              className="border border-stone-300 rounded-lg px-2 py-1 w-24"
-                            />
-                          </td>
-                          <td className="px-3">
-                            <input
-                              type="checkbox"
-                              checked={c.precisa}
-                              onChange={(e) =>
-                                updateCompra(idx, { precisa: e.target.checked })
-                              }
-                            />
-                          </td>
-                        </tr>
-                      )
-                  )}
-                </tbody>
-              </table>
+            <div className="text-sm divide-y">
+              {historicoK.map((r, i) => (
+                <div key={i} className="py-2 flex items-center justify-between">
+                  <span className="tabular-nums w-24">{r?.data || "-"}</span>
+                  <span className="flex-1">{r?.kit || "-"}</span>
+                  <span className="w-24 text-right">Qtd: {Number(r?.qtd) || 0}</span>
+                </div>
+              ))}
+              {historicoK.length === 0 && (
+                <p className="text-stone-500">Sem registros.</p>
+              )}
             </div>
-
-            <p className="text-xs text-stone-500 mt-3">
-              Quando comprar, desmarque o checkbox. <b>TODO:</b> enviar essa tabela para
-              Google Sheets/DB.
-            </p>
           </Card>
         </Container>
       </main>
@@ -932,7 +759,41 @@ function TelaAdmin({ storeApi, onLogout }) {
 }
 
 /* ---------- APP ROOT ---------- */
-export default function App() {
+export default function App() // ---------- Error Boundary (evita "tela branca") ----------
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, err: null };
+  }
+  static getDerivedStateFromError(err) {
+    return { hasError: true, err };
+  }
+  componentDidCatch(err, info) {
+    console.error("Erro capturado pelo ErrorBoundary:", err, info);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="h-screen w-screen flex items-center justify-center bg-stone-50 p-6">
+          <div className="max-w-md w-full bg-white rounded-2xl ring-1 ring-stone-200 p-5 text-stone-800">
+            <h2 className="text-lg font-semibold mb-2">Ops! Algo falhou.</h2>
+            <p className="text-sm text-stone-600 mb-4">
+              O aplicativo encontrou um erro ao renderizar esta tela.
+            </p>
+            <Button onClick={() => this.setState({ hasError: false, err: null })}>
+              Tentar novamente
+            </Button>
+            <details className="mt-3 text-xs text-stone-500 whitespace-pre-wrap">
+              {String(this.state.err || "")}
+            </details>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+{
   const storeApi = useStore();
   const [session, setSession] = useState(null);
 
