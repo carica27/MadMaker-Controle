@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* opcional: ajustes globais */
+:root {
+  --accent: #00a884;
+  --accent-hover: #008e73;
+  --bg: #f7f7f8;
+  --card: #ffffff;
+  --text: #0f172a;
+  --muted: #64748b;
+}
+
+html, body, #root { height: 100%; }
+body { background: var(--bg); }
